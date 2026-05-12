@@ -1,0 +1,6 @@
+print("This is Sola in Python.")
+print("Welcome to the world of coding!")
+print(1)
+print("Hello Python!\n")
+print("Hello!", 5)
+print("welcome to", end="*")
