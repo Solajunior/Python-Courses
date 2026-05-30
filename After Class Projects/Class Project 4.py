@@ -1,0 +1,5 @@
+typed=input("Enter a letter or a number: ")
+if typed=="a" or typed=="b" or typed=="c" or typed=="d" or typed=="e" or typed=="f" or typed=="g" or typed=="h" or typed=="i" or typed=="j" or typed=="k" or typed=="l" or typed=="m" or typed=="n" or typed=="o" or typed=="p" or typed=="q" or typed=="r" or typed=="s" or typed=="t" or typed=="u" or typed=="v" or typed=="w" or typed=="x" or typed=="y" or typed=="z" or typed=="A" or typed=="B" or typed=="C" or typed=="D" or typed=="E" or typed=="F" or typed=="G" or typed=="H" or typed=="I" or typed=="J" or typed=="K" or typed=="L" or typed=="M" or typed=="N" or typed=="O" or typed=="P" or typed=="Q" or typed=="R" or typed=="S" or typed=="T" or typed=="U" or typed=="V" or typed=="W" or typed=="X" or typed=="Y" or typed=="Z": 
+ print("You entered a letter.")
+else:
+    print("You entered something else.") 
