@@ -12,7 +12,7 @@ while i > 0:
         bill += 4.50
     elif choice == 2:
         print("You have ordered pizza.")
-        i -= 2
+        i -= 1
         bill += 6.00
     elif choice == 3:
         print("You have ordered chicken.")
