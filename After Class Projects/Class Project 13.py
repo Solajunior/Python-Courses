@@ -21,3 +21,9 @@ while i > 0:
     else:
         print("Invalid input.")
 print("Your total bill is: $", bill)
+money = float(input("Please enter the amount of money you will pay: $"))
+if money > bill:
+    change = money - bill
+    print("Your change is: $", change)
+else:
+    print("You do not have enough money.")
