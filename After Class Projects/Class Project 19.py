@@ -1,0 +1,11 @@
+list1 = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+length = len(list1)
+print("The length of the list is:", length)
+print("The 6th element of the list is:", list1[5])
+total = sum(list1)
+print("The sum of the list is:", total)
+print("The average of the list is:", total/length)
+smallest = min(list1)
+biggest = max(list1)
+print("The smallest element of the list is:", smallest)
+print("The biggest element of the list is:", biggest)
