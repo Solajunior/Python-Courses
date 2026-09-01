@@ -1,0 +1,12 @@
+{
+    "date": "2026-09-01",
+    "tasks": [],
+    "notes": [],
+    "habits": {
+        "water": 0,
+        "exercise": false,
+        "study": false,
+        "sleep": ""
+    },
+    "focus": ""
+}
