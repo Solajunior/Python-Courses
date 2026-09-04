@@ -23,6 +23,7 @@ block_textures = {
 }
 world = {}
 terrain_radius = 12
+last_generated_center = None
 
 Sky(color=color.rgb(120, 200, 255))
 DirectionalLight(rotation=(45, 45, 0), color=color.rgb(255, 240, 200))
@@ -87,30 +88,44 @@ def place_tree(x, y, z):
                 set_block(x + dx, canopy_y + dy, z + dz, 'leaves')
 
 
-def generate_world():
-    for x in range(-terrain_radius, terrain_radius + 1):
-        for z in range(-terrain_radius, terrain_radius + 1):
-            surface = randint(1, 3)
-            if abs(x) < 3 and abs(z) < 3:
-                surface = 2
+def generate_column(x, z):
+    surface = randint(1, 3)
+    if abs(x) < 3 and abs(z) < 3:
+        surface = 2
 
-            for y in range(surface):
-                if y == surface - 1:
-                    block_type = 'grass'
-                elif y >= surface - 3:
-                    block_type = 'dirt'
-                else:
-                    block_type = 'stone'
-                set_block(x, y, z, block_type)
+    for y in range(surface):
+        if y == surface - 1:
+            block_type = 'grass'
+        elif y >= surface - 3:
+            block_type = 'dirt'
+        else:
+            block_type = 'stone'
+        set_block(x, y, z, block_type)
 
-            if surface >= 2 and randint(0, 7) == 0 and abs(x) > 2 and abs(z) > 2:
-                place_tree(x, surface, z)
+    if surface >= 2 and randint(0, 7) == 0 and abs(x) > 2 and abs(z) > 2:
+        place_tree(x, surface, z)
 
-    for x in range(-terrain_radius, terrain_radius + 1):
-        for z in range(-terrain_radius, terrain_radius + 1):
-            for y in range(-2, 0):
-                if (x, y, z) not in world:
-                    set_block(x, y, z, 'sand')
+    for y in range(-2, 0):
+        if (x, y, z) not in world:
+            set_block(x, y, z, 'sand')
+
+
+def generate_world_around_player(center_x, center_z, radius=terrain_radius):
+    min_x = int(center_x) - radius
+    max_x = int(center_x) + radius
+    min_z = int(center_z) - radius
+    max_z = int(center_z) + radius
+
+    for x in range(min_x, max_x + 1):
+        for z in range(min_z, max_z + 1):
+            if (x, z) in generated_world:
+                continue
+            generate_column(x, z)
+            generated_world.add((x, z))
+
+
+# Track which map positions have already been generated so the world can keep expanding without a hard boundary.
+generated_world = set()
 
 
 def reset_player():
@@ -122,7 +137,7 @@ def update_hud():
     selected_text.text = f'Block: {selected_block.upper()}   {selected_block}'
 
 
-generate_world()
+generate_world_around_player(0, 0)
 
 player = FirstPersonController(position=(0, 8, 10), speed=6, jump_height=2, gravity=1.5)
 player.cursor.visible = False
@@ -198,7 +213,14 @@ def input(key):
 
 
 def update():
+    global last_generated_center
+
     update_block_selection()
+
+    current_center = (int(player.x), int(player.z))
+    if last_generated_center is None or abs(current_center[0] - last_generated_center[0]) > terrain_radius // 2 or abs(current_center[1] - last_generated_center[1]) > terrain_radius // 2:
+        generate_world_around_player(player.x, player.z)
+        last_generated_center = current_center
 
     if held_keys['left shift']:
         player.speed = 12 if player.gravity == 0 else 10
