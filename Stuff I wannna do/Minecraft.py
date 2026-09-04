@@ -11,8 +11,10 @@ window.background_color = color.rgb(120, 180, 255)
 window.fps_counter.enabled = True
 window.exit_button.visible = False
 
+state = 'menu'
+mods = {'vanilla': True, 'optifine': True, 'biomes': True, 'resource_packs': True}
 selected_block = 'grass'
-terrain_radius = 18
+terrain_radius = 14
 last_generated_center = None
 generated_world = set()
 world = {}
@@ -178,12 +180,10 @@ def find_surface_height(x, z):
 def generate_column(x, z):
     height = 2 + int((math.sin(x * 0.8) + math.cos(z * 0.9)) * 2) + randint(0, 2)
     height = max(2, min(8, height))
-
     if abs(x) < 3 and abs(z) < 3:
         height = 2
 
     is_desert = abs(x) % 9 == 0 or abs(z) % 9 == 0
-
     for y in range(height):
         if y == height - 1:
             block_type = 'sand' if is_desert else 'grass'
@@ -192,7 +192,6 @@ def generate_column(x, z):
         else:
             block_type = 'stone'
         set_block(x, y, z, block_type)
-
         if block_type == 'stone' and randint(0, 35) == 0:
             ore_choice = choice(['coal_ore', 'iron_ore', 'gold_ore', 'diamond_ore'])
             set_block(x, y, z, ore_choice)
@@ -226,7 +225,6 @@ def spawn_mob():
     spawn_x = int(player.x) + randint(-18, 18)
     spawn_z = int(player.z) + randint(-18, 18)
     spawn_y = find_surface_height(spawn_x, spawn_z) + 1
-
     if (spawn_x, spawn_y, spawn_z) in world:
         return
 
@@ -236,9 +234,10 @@ def spawn_mob():
 
 
 def reset_player():
-    player.position = (0, 8, 10)
-    player.rotation_y = 0
-    player.health = 20
+    if 'player' in globals():
+        player.position = (0, 8, 10)
+        player.rotation_y = 0
+        player.health = 20
 
 
 def craft_item(item_name):
@@ -261,26 +260,25 @@ def craft_item(item_name):
 
 
 def update_hud():
-    if 'player' in globals():
+    if 'player' in globals() and 'selected_text' in globals():
         selected_text.text = (
-            f'Block: {selected_block.upper()}   |   Health: {int(player.health)}   |   ' 
+            f'Block: {selected_block.upper()}   |   Health: {int(player.health)}   |   '
             f'Pickaxe: {inventory["pickaxe"]}   |   Sword: {inventory["sword"]}'
         )
 
 
 def update_block_selection():
     global selected_block
-    key_map = {
-        '1': 'grass', '2': 'dirt', '3': 'stone', '4': 'sand',
-        '5': 'wood', '6': 'leaves', '7': 'glass', '8': 'water'
-    }
+    key_map = {'1': 'grass', '2': 'dirt', '3': 'stone', '4': 'sand', '5': 'wood', '6': 'leaves', '7': 'glass', '8': 'water'}
     for key_name, block_name in key_map.items():
-        if held_keys[key_name]:
+        if held_keys.get(key_name):
             selected_block = block_name
             update_hud()
 
 
 def mine_block():
+    if 'player' not in globals():
+        return
     hit = raycast(camera.world_position, camera.forward, distance=6, ignore=(player,))
     if hit.hit and hasattr(hit.entity, 'block_type'):
         x, y, z = block_key(hit.entity.x, hit.entity.y, hit.entity.z)
@@ -288,6 +286,8 @@ def mine_block():
 
 
 def place_block():
+    if 'player' not in globals():
+        return
     hit = raycast(camera.world_position, camera.forward, distance=6, ignore=(player,))
     if not hit.hit or not hasattr(hit.entity, 'block_type'):
         return
@@ -308,6 +308,8 @@ def place_block():
 
 
 def attack():
+    if 'player' not in globals():
+        return
     hit = raycast(camera.world_position, camera.forward, distance=6, ignore=(player,))
     if hit.hit and getattr(hit.entity, 'is_mob', False):
         damage = 5 if inventory.get('sword', 0) > 0 else 2
@@ -321,14 +323,77 @@ def attack():
             return
 
 
+def start_game():
+    global state
+    state = 'loading'
+    menu_root.enabled = False
+    loading_screen.enabled = True
+    loading_bar.enabled = True
+    loading_text.visible = True
+    loading_progress = 0
+    loading_bar.scale_x = 0.01
+    for step in range(1, 11):
+        loading_progress = step / 10
+        loading_bar.scale_x = loading_progress
+        loading_text.text = f'Loading Minecraft... {step * 10}%'
+        app.task(delay=0.08)
+
+    generate_world_around_player(0, 0)
+    create_player()
+    state = 'game'
+    loading_screen.enabled = False
+    loading_bar.enabled = False
+    loading_text.visible = False
+    update_hud()
+
+
+def create_player():
+    global player
+    player = FirstPersonController(position=(0, 8, 10), speed=6, jump_height=2, gravity=1.5)
+    player.cursor.visible = False
+    player.mouse_sensitivity = Vec2(90, 90)
+    player.speed = 6
+    player.health = 20
+    camera.fov = 90
+    mouse.locked = True
+
+
+def show_mods():
+    print('Minecraft-inspired mods enabled: Vanilla, OptiFine, Biomes, Resource Packs')
+
+
+def create_menu():
+    global menu_root, menu_title, start_button, mods_button, quit_button
+    menu_root = Entity(parent=camera.ui, y=0.15)
+    menu_title = Text('MINECRAFT', origin=(0, 0), position=(0, 0.25), scale=2.5, color=color.yellow)
+    start_button = Button(text='Start Game', parent=menu_root, y=0.0, scale=(0.28, 0.08), color=color.lime)
+    mods_button = Button(text='Mods', parent=menu_root, y=-0.12, scale=(0.18, 0.08), color=color.azure)
+    quit_button = Button(text='Quit', parent=menu_root, y=-0.24, scale=(0.16, 0.08), color=color.red)
+
+    start_button.on_click = start_game
+    mods_button.on_click = show_mods
+    quit_button.on_click = application.quit
+
+
+def create_loading_screen():
+    global loading_screen, loading_bar, loading_text
+    loading_screen = Entity(parent=camera.ui, enabled=False)
+    loading_text = Text('Loading Minecraft... 0%', parent=loading_screen, position=(0, 0.15), scale=1.5, color=color.white)
+    loading_bar = Entity(parent=loading_screen, model='quad', color=color.lime, scale=(0.4, 0.05), position=(0, -0.1), enabled=False)
+    loading_bar.origin = (-0.5, 0)
+
+
+create_menu()
+create_loading_screen()
+
+
 def input(key):
     global selected_block
+    if state != 'game':
+        return
 
     if key in '12345678':
-        selected_block = {
-            '1': 'grass', '2': 'dirt', '3': 'stone', '4': 'sand',
-            '5': 'wood', '6': 'leaves', '7': 'glass', '8': 'water'
-        }[key]
+        selected_block = {'1': 'grass', '2': 'dirt', '3': 'stone', '4': 'sand', '5': 'wood', '6': 'leaves', '7': 'glass', '8': 'water'}[key]
         update_hud()
 
     if key == 'left mouse down':
@@ -337,7 +402,6 @@ def input(key):
             attack()
         elif hit.hit and hasattr(hit.entity, 'block_type'):
             mine_block()
-
     elif key == 'right mouse down':
         place_block()
 
@@ -361,6 +425,8 @@ def input(key):
 
 def update():
     global last_generated_center
+    if state != 'game':
+        return
 
     update_block_selection()
 
@@ -396,24 +462,14 @@ def update():
     update_hud()
 
 
-generate_world_around_player(0, 0)
-
-player = FirstPersonController(position=(0, 8, 10), speed=6, jump_height=2, gravity=1.5)
-player.cursor.visible = False
-player.mouse_sensitivity = Vec2(90, 90)
-player.speed = 6
-player.health = 20
-camera.fov = 90
-mouse.locked = True
-
-selected_text = Text(text='Block: GRASS', position=(0, 0.45), origin=(0, 0), scale=1.2, background=False)
+selected_text = Text(text='Block: GRASS', position=(0, 0.45), origin=(0, 0), scale=1.2, background=False, enabled=False)
 info_text = Text(
     text='1-8 = select block   |   LMB = mine / attack   |   RMB = place\nC = craft pickaxe   |   V = craft sword   |   B = craft glass\nShift = sprint   |   Space = jump   |   G = fly   |   R = reset   |   Esc = quit',
     origin=(0, 0),
     y=0.38,
     scale=0.95,
     background=False,
+    enabled=False,
 )
 
-update_hud()
 app.run()
